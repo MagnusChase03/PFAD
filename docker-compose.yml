@@ -1,8 +1,0 @@
-services:
-  api:
-    image: "localhost/hackutd2024-api"
-    env_file: .env
-    ports:
-      - "8081:8080"
-    restart: always
-    command: ["/code/apiServer"]
