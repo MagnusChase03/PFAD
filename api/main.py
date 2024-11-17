@@ -26,7 +26,7 @@ def handler(event, ctx):
 
     handler = "request"
     try:
-        body = json.loads(body)
+        body = json.loads(base64.b64decode(body))
     except Exception:
         handler = "file"
         body = base64.b64decode(body).decode()
@@ -37,7 +37,7 @@ def handler(event, ctx):
         return handle_file(body)
 
 def handle_request(body):
-    data = read_s3(body["filename"] + "_results.csv")
+    data = read_s3(body["fileName"] + "_results.csv")
     return response(200, data)
 
 def handle_file(body):
