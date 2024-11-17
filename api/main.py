@@ -26,7 +26,7 @@ def handler(event, ctx):
 
     handler = "request"
     try:
-        body = json.loads(base64.b64decode(body))
+        body = json.loads(body)
     except Exception:
         handler = "file"
         body = base64.b64decode(body).decode()
@@ -37,7 +37,7 @@ def handler(event, ctx):
         return handle_file(body)
 
 def handle_request(body):
-    data = read_s3(body["fileName"] + "_results.csv")
+    data = read_s3(body["filename"] + "_results.csv")
     return response(200, data)
 
 def handle_file(body):
@@ -87,7 +87,8 @@ def handle_file(body):
 def read_s3(filename):
     client = boto3.client('s3')
     req = client.get_object(Bucket=bucket, Key=filename)
-    return req.Body.read().decode()
+    data = req["Body"].read()
+    return data.decode()
 
 def write_s3(filename, data):
     client = boto3.client('s3')
