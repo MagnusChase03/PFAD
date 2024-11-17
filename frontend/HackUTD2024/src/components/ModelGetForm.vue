@@ -59,12 +59,7 @@ export default defineComponent({
       //JSON.stringify({"fileName":this.formValue.filename}, null, 2)
      fetch('https://b63boc6lac5bmsmmddazum22um0mvswp.lambda-url.us-east-1.on.aws/', {
       method: 'POST',
-        mode: 'cors', // Enables CORS
-
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // This will not affect actual CORS behavior
-      },
+      mode: 'cors', // Enables CORS
       body: JSON.stringify({
         filename: this.formValue.filename,
       }),
@@ -87,7 +82,7 @@ export default defineComponent({
 })
 </script>
 <template>
-  <n-form ref="formRef" inline :label-width="80" :model="formValue">
+  <n-form ref="" inline :label-width="80" :model="formValue">
     <!-- :rules="rules" -->
 
     <!-- @submit.prevent="handleSubmit" -->
