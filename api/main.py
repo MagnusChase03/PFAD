@@ -3,12 +3,35 @@ import json
 import boto3
 import os
 
+bucket = os.environ["bucket"]
+
 def handler(event, ctx):
-    bucket = os.environ["bucket"]
     if not event.get("body"):
         return response(400, "Bad Request")
 
     body = json.loads(event["body"])
+    if not body.get("path"):
+        return response(400, "Bad Request")
+
+    path = body["path"]
+    if path == "/upload":
+        return handle_file_upload(body)
+    elif path == "/predict":
+        return handle_predict_data(body)
+
+    return response(400, "Bad Request")
+
+def response(code, body):
+    return {
+        "statusCode": code,
+        "isBase64Encoded": False,
+        "body": json.dumps(body),
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+
+def handle_file_upload(body):
     if not body.get("raw_data") or not body.get("name"):
         return response(400, "Bad Request")
 
@@ -20,12 +43,11 @@ def handler(event, ctx):
 
     return response(200, "Ok")
 
-def response(code, body):
-    return {
-        "statusCode": code,
-        "isBase64Encoded": False,
-        "body": json.dumps(body),
-        "headers": {
-            "Content-Type": "application/json"
-        }
-    }
+def handle_predict_data(body):
+    if not body.get("volume") or not body.get("valve"):
+        return response(400, "Bad Request")
+
+    volume = int(body["volume"])
+    valve = float(body["valve"])
+
+    return response(200, "Ok")
