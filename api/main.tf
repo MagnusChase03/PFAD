@@ -18,13 +18,6 @@ resource "aws_s3_bucket" "aws_bucket" {
     bucket = var.aws_bucket_name
 }
 
-resource "aws_lambda_layer_version" "lambda_layer" {
-  filename   = var.aws_lambda_layer_file
-  layer_name = var.aws_lambda_layer_name
-
-  compatible_runtimes = ["python3.12"]
-}
-
 data "aws_iam_policy_document" "aws_assume_role" {
   statement {
     effect = "Allow"
@@ -49,7 +42,7 @@ data "archive_file" "lambda" {
   output_path = "lambda_function_payload.zip"
 }
 
-resource "aws_lambda_function" "test_lambda" {
+resource "aws_lambda_function" "aws_lambda" {
   filename      = "lambda_function_payload.zip"
   function_name = var.aws_lambda_function_name
   role          = aws_iam_role.aws_lambda_iam.arn
@@ -57,7 +50,6 @@ resource "aws_lambda_function" "test_lambda" {
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime          = "python3.12"
-  layers           = [aws_lambda_layer_version.lambda_layer.arn]
 
   environment {
     variables = {
@@ -66,26 +58,32 @@ resource "aws_lambda_function" "test_lambda" {
   }
 }
 
-data "aws_iam_policy_document" "lambda_s3" {
+data "aws_iam_policy_document" "lambda_perms" {
   statement {
     effect = "Allow"
 
     actions = [
-      "s3:*"
+      "s3:*",
+      "logs:*"
     ]
 
-    resources = ["arn:aws:s3:::*"]
+    resources = ["arn:aws:s3:::*", "arn:aws:logs:*:*:*"]
   }
 }
 
-resource "aws_iam_policy" "lambda_s3" {
-  name        = "lambda_s3"
+resource "aws_iam_policy" "lambda_perms" {
+  name        = "lambda_perms"
   path        = "/"
   description = "IAM policy for accessing s3 from a lambda"
-  policy      = data.aws_iam_policy_document.lambda_s3.json
+  policy      = data.aws_iam_policy_document.lambda_perms.json
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_s3" {
+resource "aws_iam_role_policy_attachment" "lambda_perms" {
   role       = aws_iam_role.aws_lambda_iam.name
-  policy_arn = aws_iam_policy.lambda_s3.arn
+  policy_arn = aws_iam_policy.lambda_perms.arn
+}
+
+resource "aws_lambda_function_url" "lambda_url" {
+  function_name      = aws_lambda_function.aws_lambda.function_name
+  authorization_type = "NONE"
 }

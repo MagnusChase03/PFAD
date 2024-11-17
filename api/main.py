@@ -1,103 +1,70 @@
-import pandas as pd
-from sklearn.cluster import KMeans
-
 from io import StringIO
 import json
 import boto3
 import math
+import csv
 import os
 
 bucket = os.environ["bucket"]
 
 def handler(event, ctx):
-    if not event.get("body"):
-        return response(400, "Bad Request")
-
-    body = json.loads(event["body"])
-    if not body.get("path"):
-        return response(400, "Bad Request")
-
-    path = body["path"]
-    if path == "/upload":
-        return handle_file_upload(body)
-    elif path == "/predict":
-        return handle_predict_data(body)
-
     return response(400, "Bad Request")
 
-def handle_file_upload(body):
-    if not body.get("raw_data") or not body.get("name"):
-        return response(400, "Bad Request")
+def find_blockage(data):
+    clusters = kmeans(data, 2)
 
-    name = body["name"]
-    raw_data = body["raw_data"]
-
-    client = boto3.client('s3')
-    client.put_object(Body=raw_data.encode(), Bucket=bucket, Key=f"{name}.csv")
-
-    df = pd.read_csv(StringIO(raw_data))
-    center_x, center_y, threshold, error_threshold = preform_kmeans(df)
-
-    cached_data = {
-        "center_x": center_x,
-        "center_y": center_y,
-        "threshold": threshold,
-        "error_threshold": error_threshold
-    }
-    client.put_object(Body=json.dumps(cached_data).encode(), Bucket=bucket, Key=f"{name}_cache.csv")
-
-    return response(200, "Ok")
-
-def preform_kmeans(df):
-    old_setpoint = df.iloc[0, 2]
-    old_percent_open = df.iloc[0, 3]
-    for i in range(0, df.shape[0]):
-        current_setpoint = df.iloc[i, 2]
-        current_percent_open = df.iloc[i, 3]
-        if math.isnan(df.iloc[i, 1]):
-            df.iloc[i, 1] = 0.0
-        if math.isnan(current_setpoint):
-            df.iloc[i, 2] = old_setpoint
-        if math.isnan(current_percent_open):
-            df.iloc[i, 3] = old_percent_open
-        old_setpoint = df.iloc[i, 2]
-        old_percent_open = df.iloc[i, 3]
-
-    dataset = []
-    X = [] # Current volume
-    y = [] # Valve open
-    for i in range(0, df.shape[0]):
-        X.append(df.iloc[i, 1])
-        y.append(df.iloc[i, 3])
-        dataset.append([df.iloc[i, 1], df.iloc[i, 3]])
-
-    kmeans = kmeans = KMeans(n_clusters=2, random_state=0, n_init="auto").fit(dataset)
-    center_x = kmeans.cluster_centers_[0][0]
-    center_y = kmeans.cluster_centers_[0][1]
-
-    threshold = 100000
     total = 0
     count = 0
-    for i in range(0, len(X)):
-        point = [X[i].item(), y[i].item()]
-        pred = kmeans.predict([point]).item()
-        distance = math.sqrt((point[0] - center_x) ** 2 + (point[1] - center_y) ** 2)
-        if pred == 0 and distance < threshold:
-            total += distance
+    for i in range(0, len(data)):
+        d1 = distance(data[i][0], clusters[0][0], data[i][1], clusters[0][1])
+        d2 = distance(data[i][0], clusters[1][0], data[i][1], clusters[1][1])
+        if d1 < d2:
+            total += d1
             count += 1
-    threshold = total / count
+    threshold = 2 * total / count
     error_threshold = 4 * threshold
 
-    return (center_x, center_y, threshold, error_threshold)
+    blockages = []
+    for i in range(0, len(data)):
+        if data[i][0] < clusters[0][0] - error_threshold or data[i][1] > clusters[0][1] + error_threshold:
+            blockages.append(2.0)
+        elif data[i][0] < clusters[0][0] - threshold or data[i][1] > clusters[0][1] + threshold:
+            blockages.append(1.0)
+        else:
+            blockages.append(0.0)
 
-def handle_predict_data(body):
-    if not body.get("volume") or not body.get("valve"):
-        return response(400, "Bad Request")
+    return (threshold, error_threshold, blockages)
 
-    volume = int(body["volume"])
-    valve = float(body["valve"])
+def kmeans(data, clusters):
+    cluster = [data[i] for i in range(0, clusters)]
+    for i in range(0, 100):
+        totals = [[0.0, 0.0] for i in range(0, clusters)]
+        counts = [0.0 for i in range(0, clusters)]
+        for point in data:
+            distances = []
+            for c in range(0, len(cluster)):
+                distances.append(distance(point[0], cluster[c][0], point[1], cluster[c][1]))
+            min_i = min(distances)
+            totals[min_i][0] += point[0]
+            totals[min_i][1] += point[1]
+            counts[min_i] += 1
+        for c in range(0, len(clusters)):
+            totals[c][0] = totals[c][0] / counts[c]
+            totals[c][1] = totals[c][1] / counts[c]
+            cluster[c] = totals[c]
+    return cluster
 
-    return response(200, "Ok")
+def distance(x, x2, y, y2):
+    return math.sqrt((x2 - x) ** 2 + (y2 - y) ** 2)
+
+def min(distances):
+    min_i = 0
+    min = distances[0]
+    for i in range(1, min_i):
+        if distances[i] < min:
+            min = distances[i]
+            min_i = i
+    return min_i
 
 def response(code, body):
     return {

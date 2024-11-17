@@ -10,18 +10,6 @@ variable "aws_bucket_name" {
     default     = "s3-hackutd-2024-bucket"
 }
 
-variable "aws_lambda_layer_name" {
-    description = "AWS lambda layer name"
-    type        = string
-    default     = "lambda-pandas-layer"
-}
-
-variable "aws_lambda_layer_file" {
-    description = "AWS layer filepath"
-    type        = string
-    default     = "layer.zip"
-}
-
 variable "aws_lambda_function_name" {
     description = "AWS lambda function name"
     type        = string
