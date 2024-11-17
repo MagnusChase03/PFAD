@@ -58,4 +58,34 @@ resource "aws_lambda_function" "test_lambda" {
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime          = "python3.12"
   layers           = [aws_lambda_layer_version.lambda_layer.arn]
+
+  environment {
+    variables = {
+      bucket = var.aws_bucket_name
+    }
+  }
+}
+
+data "aws_iam_policy_document" "lambda_s3" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:*"
+    ]
+
+    resources = ["arn:aws:s3:::*"]
+  }
+}
+
+resource "aws_iam_policy" "lambda_s3" {
+  name        = "lambda_s3"
+  path        = "/"
+  description = "IAM policy for accessing s3 from a lambda"
+  policy      = data.aws_iam_policy_document.lambda_s3.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_s3" {
+  role       = aws_iam_role.aws_lambda_iam.name
+  policy_arn = aws_iam_policy.lambda_s3.arn
 }
