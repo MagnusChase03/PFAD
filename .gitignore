@@ -3,3 +3,4 @@ venv
 .ipy*
 *.tfvars
 *.tfstate*
+*.zip
