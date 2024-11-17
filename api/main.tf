@@ -50,6 +50,7 @@ resource "aws_lambda_function" "aws_lambda" {
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime          = "python3.12"
+  timeout          = 15
 
   environment {
     variables = {
@@ -86,4 +87,13 @@ resource "aws_iam_role_policy_attachment" "lambda_perms" {
 resource "aws_lambda_function_url" "lambda_url" {
   function_name      = aws_lambda_function.aws_lambda.function_name
   authorization_type = "NONE"
+
+  cors {
+    allow_credentials = true
+    allow_origins     = ["*"]
+    allow_methods     = ["*"]
+    allow_headers     = ["date", "keep-alive"]
+    expose_headers    = ["keep-alive", "date"]
+    max_age           = 86400
+  }
 }

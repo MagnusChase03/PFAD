@@ -1,14 +1,124 @@
 from io import StringIO
+import base64
 import json
 import boto3
 import math
-import csv
 import os
 
 bucket = os.environ["bucket"]
 
 def handler(event, ctx):
-    return response(400, "Bad Request")
+    req = event.get("requestContext")
+    if req is None:
+        return response(400, "Bad Request")
+
+    http = req.get("http")
+    if http is None:
+        return response(400, "Bad Request")
+
+    method = http.get("method")
+    if not method == "POST":
+        return response(400, "Bad Request")
+
+    body = event.get("body")
+    if body is None:
+        return response(400, "Bad Request")
+
+    handler = "request"
+    try:
+        body = json.loads(body)
+    except Exception:
+        handler = "file"
+        body = base64.b64decode(body).decode()
+
+    if handler == "request":
+        return handle_request(body)
+    else:
+        return handle_file(body)
+
+def handle_request(body):
+    return response(200, "Ok")
+
+def handle_file(body):
+    start_i = body.find("filename=\"")
+    end_i = start_i
+    while body[end_i] != '\n':
+        end_i += 1
+
+    title = body[start_i:end_i]
+    title = title[title.find("\""):-1]
+
+    body = "\n".join(body.split("\n")[4:])
+    write_s3(title, body)
+
+    dates, points = get_points(body)
+    clusters, threshold, error_threshold, blockages = find_blockage(points)
+
+    result_blockages = []
+    result_volume = []
+    result_valve = []
+    for i in range(0, len(dates)):
+        result_blockages.append({
+            "Date": dates[i],
+            "Blockage": blockages[i]
+        })
+        result_volume.append({
+            "Date": dates[i],
+            "Volume": points[i][0]
+        })
+        result_valve.append({
+            "Date": dates[i],
+            "Valve": points[i][1]
+        })
+
+    write_s3(title.split(".csv")[0] + "_results.csv", json.dumps({
+        "clusters": clusters,
+        "threshold": threshold,
+        "error_threshold": error_threshold,
+        "blockages": result_blockages,
+        "volumes": result_volume,
+        "valves": result_valve
+    }))
+
+    return response(200, "Ok")
+
+def read_s3(filename):
+    client = boto3.client('s3')
+    req = client.get_object(Bucket=bucket, Key=filename)
+    return req.Body.read().decode()
+
+def write_s3(filename, data):
+    client = boto3.client('s3')
+    client.put_object(Bucket=bucket, Key=filename, Body=data.encode())
+
+def get_points(csv_body):
+    lines = csv_body.split("\n")
+    lines = lines[1:]
+
+    dates = []
+    points = []
+    old_valve = -1.0
+    old_volume = -1.0
+    for line in lines:
+        fields = line.split(",")
+        dates.append(fields[0])
+
+        try:
+            volume = float(fields[1])
+        except:
+            volume = old_volume
+
+        try:
+            valve = float(fields[3])
+        except:
+            valve = old_valve
+
+        points.append([volume, valve])
+
+        old_volume = old_volume
+        old_valve = valve
+
+    return (dates, points)
 
 def find_blockage(data):
     clusters = kmeans(data, 2)
@@ -33,7 +143,7 @@ def find_blockage(data):
         else:
             blockages.append(0.0)
 
-    return (threshold, error_threshold, blockages)
+    return (clusters, threshold, error_threshold, blockages)
 
 def kmeans(data, clusters):
     cluster = [data[i] for i in range(0, clusters)]
