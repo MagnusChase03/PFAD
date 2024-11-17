@@ -1,0 +1,7 @@
+.terraform*
+venv
+.ipy*
+*.tfvars
+*.tfstate*
+*.zip
+api/python
