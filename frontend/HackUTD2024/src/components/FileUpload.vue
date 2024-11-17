@@ -29,7 +29,7 @@ export default defineComponent({
      -->
   <n-upload
     directory-dnd
-    action="https://2l5gzv3a4jz2p6zao6bmpnezva0kbije.lambda-url.us-east-1.on.aws/"
+    action="https://b63boc6lac5bmsmmddazum22um0mvswp.lambda-url.us-east-1.on.aws/"
     :max="1"
   >
     <n-upload-dragger>

@@ -4,7 +4,8 @@ import HelloWorld from './components/HelloWorld.vue'
 import Button from './components/Button.vue'
 import FileUpload from './components/FileUpload.vue'
 import Form from './components/Form.vue'
-
+import LineGraph from './components/LineGraph.vue'
+import ModelGetForm from './components/ModelGetForm.vue'
 import { defineComponent } from 'vue'
 import { darkTheme, NConfigProvider,NText } from 'naive-ui'
 
@@ -19,6 +20,8 @@ import { darkTheme, NConfigProvider,NText } from 'naive-ui'
     FileUpload,
     NText,
     Form,
+    ModelGetForm,
+    LineGraph
   }
   })
 </script>
@@ -38,7 +41,14 @@ import { darkTheme, NConfigProvider,NText } from 'naive-ui'
       </header>
       <Form/>
     </div>
+    <div>
+      <header>
+        <h1>Get Model</h1>
+      </header>
+      <ModelGetForm/>
+    </div>
   </n-config-provider>
+    <LineGraph class="graph"/>
 
   <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
@@ -58,7 +68,12 @@ import { darkTheme, NConfigProvider,NText } from 'naive-ui'
 </template>
 
 <style scoped>
-
+.graph
+{
+  background-color: white;
+  padding: 10px;
+  border-radius: 3px;
+}
 /* header {
   line-height: 1.5;
   max-height: 100vh;
