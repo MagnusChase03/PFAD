@@ -37,7 +37,7 @@ def handler(event, ctx):
         return handle_file(body)
 
 def handle_request(body):
-    data = read_s3(body["filename"])
+    data = read_s3(body["filename"] + "_results.csv")
     return response(200, data)
 
 def handle_file(body):
@@ -55,6 +55,7 @@ def handle_file(body):
     dates, points = get_points(body)
     clusters, threshold, error_threshold, blockages = find_blockage(points)
 
+    dates = dates[:-3]
     result_blockages = []
     result_volume = []
     result_valve = []
@@ -159,7 +160,7 @@ def kmeans(data, clusters):
             totals[min_i][0] += point[0]
             totals[min_i][1] += point[1]
             counts[min_i] += 1
-        for c in range(0, len(clusters)):
+        for c in range(0, len(cluster)):
             totals[c][0] = totals[c][0] / counts[c]
             totals[c][1] = totals[c][1] / counts[c]
             cluster[c] = totals[c]
@@ -171,7 +172,7 @@ def distance(x, x2, y, y2):
 def min(distances):
     min_i = 0
     min = distances[0]
-    for i in range(1, min_i):
+    for i in range(1, len(distances)):
         if distances[i] < min:
             min = distances[i]
             min_i = i
