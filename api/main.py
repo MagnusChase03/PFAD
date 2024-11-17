@@ -37,7 +37,8 @@ def handler(event, ctx):
         return handle_file(body)
 
 def handle_request(body):
-    return response(200, "Ok")
+    data = read_s3(body["filename"])
+    return response(200, data)
 
 def handle_file(body):
     start_i = body.find("filename=\"")
@@ -46,7 +47,7 @@ def handle_file(body):
         end_i += 1
 
     title = body[start_i:end_i]
-    title = title[title.find("\""):-1]
+    title = title[title.find("\"")+1:-2]
 
     body = "\n".join(body.split("\n")[4:])
     write_s3(title, body)
